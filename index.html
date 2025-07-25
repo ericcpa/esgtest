@@ -12,7 +12,7 @@
     
     <!-- Chosen Palette: Warm Neutrals with Teal Accent -->
     <!-- Application Structure Plan: The application is designed with a thematic, non-linear structure to enhance user exploration and understanding. It's divided into four main sections accessible via a top navigation bar: 1. **介紹 (Introduction):** A landing page that defines the core problem. 2. **雙重觀點 (Dual Perspectives):** An interactive comparison of the two main sustainability standards (ISSB vs. ESRS), using a chart and toggles to facilitate direct comparison. 3. **影響鏈結 (Impact Chain):** A visual flowchart explaining how non-financial impacts translate into financial consequences, clarifying a complex process. 4. **實務應用 (Practical Application):** An interactive tool to explore industry-specific guidelines (SASB). This structure was chosen to guide the user from foundational concepts to comparative analysis, then to process understanding, and finally to practical application, which is more intuitive and engaging than the original linear outline. -->
-    <!-- Visualization & Content Choices: 1. **Standards Comparison (Sec 3, 8):** Goal: Compare. Viz: Bar Chart (Chart.js) and dynamic text blocks. Interaction: Toggling between ISSB/ESRS views. Justification: Directly comparing the two competing standards is key to understanding the topic. 2. **Risk Transformation (Sec 12, 13, 14):** Goal: Show a process. Viz: HTML/CSS flowchart. Interaction: Clicking on stages reveals detailed text. Justification: Visualizing the flow from external impact to financial risk simplifies a complex causal chain. 3. **SASB Guidelines (Sec 14):** Goal: Organize and provide examples. Viz: Dropdown-controlled content cards. Interaction: Selecting an industry updates the displayed information. Justification: Provides concrete, actionable examples, making the concepts tangible. 4. **LLM Integration (Sec 14):** Goal: Provide deeper insight/explanation. Viz: Dynamic text block. Interaction: Button click to generate explanation for selected SASB topic using Gemini API. Justification: Enhances learning and engagement by providing on-demand, context-aware explanations. -->
+    <!-- Visualization & Content Choices: 1. **Standards Comparison (Sec 3, 8):** Goal: Compare. Viz: Bar Chart (Chart.js) and dynamic text blocks. Interaction: Toggling between ISSB/ESRS views. Justification: Directly comparing the two competing standards is key to understanding the topic. 2. **Risk Transformation (Sec 12, 13, 14):** Goal: Show a process. Viz: HTML/CSS flowchart. Interaction: Clicking on stages reveals detailed text. Justification: Visualizing the flow from external impact to financial risk simplifies a complex causal chain. 3. **SASB Guidelines (Sec 14):** Goal: Organize and provide examples. Viz: Dropdown-controlled content cards. Interaction: Selecting an industry updates the displayed information. Justification: Provides concrete, actionable examples, making the concepts tangible. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 
     <style>
@@ -196,7 +196,6 @@
                     </div>
 
                     <div id="sasb-content" class="mt-8 max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                        <!-- SASB content will be loaded here by JS -->
                     </div>
                 </div>
             </section>
@@ -234,7 +233,6 @@
 
             const sasbData = {
                 electronics: {
-                    name: '電子製造業',
                     title: '電子製造業 關鍵揭露主題',
                     topics: [
                         '產品生命週期管理',
@@ -245,7 +243,6 @@
                     ]
                 },
                 semiconductors: {
-                    name: '半導體業',
                     title: '半導體業 關鍵揭露主題',
                     topics: [
                         '溫室氣體排放',
@@ -256,7 +253,6 @@
                     ]
                 },
                 airlines: {
-                    name: '航空業',
                     title: '航空業 關鍵揭露主題',
                     topics: [
                         '溫室氣體排放',
@@ -267,42 +263,6 @@
                 }
             };
 
-            async function generateTopicExplanation(industryKey, topic) {
-                const industryName = sasbData[industryKey].name;
-                const prompt = `請為 ${industryName} 的永續主題「${topic}」提供一個簡短的解釋或相關的實務案例。請用繁體中文回答。`;
-                
-                const llmResponseDiv = document.getElementById('llm-response');
-                const llmLoadingDiv = document.getElementById('llm-loading');
-                llmResponseDiv.innerHTML = '';
-                llmLoadingDiv.classList.remove('hidden');
-
-                try {
-                    let chatHistory = [];
-                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                    const payload = { contents: chatHistory };
-                    const apiKey = ""
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                    const response = await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                    const result = await response.json();
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        const text = result.candidates[0].content.parts[0].text;
-                        llmResponseDiv.innerHTML = `<p class="text-slate-700">${text}</p>`;
-                    } else {
-                        llmResponseDiv.innerHTML = '<p class="text-red-500">未能生成解釋。請稍後再試。</p>';
-                    }
-                } catch (error) {
-                    llmResponseDiv.innerHTML = `<p class="text-red-500">生成解釋時發生錯誤：${error.message}</p>`;
-                } finally {
-                    llmLoadingDiv.classList.add('hidden');
-                }
-            }
-
             function updateSasbContent(industry) {
                 const data = sasbData[industry];
                 const container = document.getElementById('sasb-content');
@@ -310,18 +270,7 @@
                 container.innerHTML = `
                     <h3 class="text-xl font-bold text-slate-800 mb-4">${data.title}</h3>
                     <ul class="list-disc list-inside text-slate-600 space-y-2">${topicsHtml}</ul>
-                    <button id="llm-generate-btn" class="mt-6 px-6 py-2 bg-teal-600 text-white rounded-full font-semibold hover:bg-teal-700 transition duration-300 ease-in-out shadow-md">✨ 深入了解主題 ✨</button>
-                    <div id="llm-loading" class="hidden mt-4 text-center text-teal-600">載入中...</div>
-                    <div id="llm-response" class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm"></div>
                 `;
-
-                document.getElementById('llm-generate-btn').addEventListener('click', () => {
-                    const selectedIndustryKey = document.getElementById('sasb-industry').value;
-                    const firstTopic = sasbData[selectedIndustryKey].topics[0];
-                    if (firstTopic) {
-                        generateTopicExplanation(selectedIndustryKey, firstTopic);
-                    }
-                });
             }
 
             function updatePerspectiveContent(type) {
@@ -443,7 +392,7 @@
             const initialHash = window.location.hash || '#intro';
             navigateTo(initialHash);
             updatePerspectiveContent('issb');
-            updateSasbContent('electronics'); // Initialize SASB content on load
+            updateSasbContent('electronics');
         });
     </script>
 </body>
