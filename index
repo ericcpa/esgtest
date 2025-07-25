@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式網頁報告：永續資訊揭露之重大性考量</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutrals with Teal Accent -->
+    <!-- Application Structure Plan: The application is designed with a thematic, non-linear structure to enhance user exploration and understanding. It's divided into four main sections accessible via a top navigation bar: 1. **介紹 (Introduction):** A landing page that defines the core problem. 2. **雙重觀點 (Dual Perspectives):** An interactive comparison of the two main sustainability standards (ISSB vs. ESRS), using a chart and toggles to facilitate direct comparison. 3. **影響鏈結 (Impact Chain):** A visual flowchart explaining how non-financial impacts translate into financial consequences, clarifying a complex process. 4. **實務應用 (Practical Application):** An interactive tool to explore industry-specific guidelines (SASB). This structure was chosen to guide the user from foundational concepts to comparative analysis, then to process understanding, and finally to practical application, which is more intuitive and engaging than the original linear outline. -->
+    <!-- Visualization & Content Choices: 1. **Standards Comparison (Sec 3, 8):** Goal: Compare. Viz: Bar Chart (Chart.js) and dynamic text blocks. Interaction: Toggling between ISSB/ESRS views. Justification: Directly comparing the two competing standards is key to understanding the topic. 2. **Risk Transformation (Sec 12, 13, 14):** Goal: Show a process. Viz: HTML/CSS flowchart. Interaction: Clicking on stages reveals detailed text. Justification: Visualizing the flow from external impact to financial risk simplifies a complex causal chain. 3. **SASB Guidelines (Sec 14):** Goal: Organize and provide examples. Viz: Dropdown-controlled content cards. Interaction: Selecting an industry updates the displayed information. Justification: Provides concrete, actionable examples, making the concepts tangible. 4. **LLM Integration (Sec 14):** Goal: Provide deeper insight/explanation. Viz: Dynamic text block. Interaction: Button click to generate explanation for selected SASB topic using Gemini API. Justification: Enhances learning and engagement by providing on-demand, context-aware explanations. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; /* Tailwind's slate-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+        }
+        .nav-link.active {
+            color: #0d9488; /* Tailwind's teal-600 */
+            border-bottom-color: #0d9488;
+        }
+        .content-section {
+            display: none;
+            animation: fadeIn 0.8s;
+        }
+        .content-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .perspective-btn {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .perspective-btn.active {
+            background-color: #0d9488;
+            color: white;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="app" class="min-h-screen flex flex-col">
+        <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+            <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-teal-700">永續重大性解析</h1>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#intro" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-teal-600 border-b-2 border-transparent">介紹</a>
+                            <a href="#perspectives" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-teal-600 border-b-2 border-transparent">雙重觀點</a>
+                            <a href="#chain" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-teal-600 border-b-2 border-transparent">影響鏈結</a>
+                            <a href="#application" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-teal-600 border-b-2 border-transparent">實務應用</a>
+                        </div>
+                    </div>
+                    <div class="md:hidden">
+                        <select id="mobile-nav" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5">
+                            <option value="intro">介紹</option>
+                            <option value="perspectives">雙重觀點</option>
+                            <option value="chain">影響鏈結</option>
+                            <option value="application">實務應用</option>
+                        </select>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main class="flex-grow">
+            <section id="intro" class="content-section py-12 md:py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">何謂「重大性」？</h2>
+                    <p class="mt-4 text-lg leading-8 text-slate-600">在永續資訊的浪潮中，企業揭露的資訊並非越多越好。「重大性」是篩選核心資訊的關鍵原則，用以判斷哪些永續議題的風險與機會，足以影響利害關係人的決策。本報告將帶您深入解析重大性的核心概念、評估方法與實務應用。</p>
+                </div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-900">資料 vs. 資訊</h3>
+                        <p class="mt-2 text-slate-600">「資料」是未經整理的原始素材，而「資訊」是經過評估、具有特定目的，能影響決策的有用材料。永續報告書追求的是提供高品質的「資訊」，而非堆砌大量的「資料」。</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-900">資訊的決策有用性</h3>
+                        <p class="mt-2 text-slate-600">一項資訊要具備決策有用性，必須滿足兩個條件：<span class="font-bold text-teal-600">攸關性 (Relevancy)</span> 與 <span class="font-bold text-teal-600">重大性 (Materiality)</span>。攸關但-不重大的資訊，如同隔夜的馬鈴薯泥，雖曾有價值但已無法影響當下決策。</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="perspectives" class="content-section py-12 md:py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">雙重觀點：誰的重大性？</h2>
+                        <p class="mt-4 max-w-2xl mx-auto text-lg leading-8 text-slate-600">全球永續準則的發展呈現兩種主流觀點：一種聚焦於對企業財務的影響，另一種則同時考量企業對環境社會的衝擊。這兩種觀點分別由國際永續準則理事會(ISSB)與歐盟(ESRS)主導，形成了「單一重大性」與「雙重重大性」的差異。請點擊下方按鈕，探索兩者的核心差異。</p>
+                    </div>
+
+                    <div class="mt-10 flex justify-center space-x-4">
+                        <button id="btn-issb" class="perspective-btn px-6 py-2 font-semibold border border-slate-300 rounded-full">ISSB 單一重大性</button>
+                        <button id="btn-esrs" class="perspective-btn px-6 py-2 font-semibold border border-slate-300 rounded-full">ESRS 雙重重大性</button>
+                    </div>
+                    
+                    <div class="mt-10 bg-white p-6 md:p-8 rounded-xl shadow-lg border border-slate-200">
+                        <div class="chart-container">
+                            <canvas id="standardsChart"></canvas>
+                        </div>
+                        <div id="perspective-content" class="mt-8">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="chain" class="content-section py-12 md:py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">影響鏈結：從外部衝擊到財務結果</h2>
+                        <p class="mt-4 max-w-3xl mx-auto text-lg leading-8 text-slate-600">企業對環境與社會的影響（影響重大性），並非獨立於財務之外。隨著法規監管、市場壓力與社會期望的提升，這些外部影響會逐步「內部化」為企業的實際成本或風險，最終轉化為財務上的重大性。這個過程是理解永續風險的關鍵。</p>
+                    </div>
+                    <div class="mt-16">
+                        <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
+                            <div class="text-center p-4 bg-white rounded-lg shadow-md w-60">
+                                <h4 class="font-bold">企業營運與影響</h4>
+                                <p class="text-sm text-slate-500">如：溫室氣體排放</p>
+                            </div>
+                            <div class="text-2xl text-teal-500 font-sans transform md:rotate-0 rotate-90">&rarr;</div>
+                            <div class="text-center p-4 bg-white rounded-lg shadow-md w-60">
+                                <h4 class="font-bold">外部成本內部化</h4>
+                                <p class="text-sm text-slate-500">如：碳稅、法規罰款</p>
+                            </div>
+                            <div class="text-2xl text-teal-500 font-sans transform md:rotate-0 rotate-90">&rarr;</div>
+                            <div class="text-center p-4 bg-white rounded-lg shadow-md w-60">
+                                <h4 class="font-bold">財務風險與機會</h4>
+                                <p class="text-sm text-slate-500">如：營運成本增加</p>
+                            </div>
+                            <div class="text-2xl text-teal-500 font-sans transform md:rotate-0 rotate-90">&rarr;</div>
+                             <div class="text-center p-4 bg-white rounded-lg shadow-md w-60">
+                                <h4 class="font-bold">影響財務報表</h4>
+                                <p class="text-sm text-slate-500">如：利潤下降</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-12 max-w-5xl mx-auto">
+                        <h3 class="text-2xl font-bold text-center mb-6">依賴與影響的三種模式</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                                <h4 class="font-semibold text-teal-700">模式一：既依賴又能影響</h4>
+                                <p class="mt-2 text-sm text-slate-600">企業對其夥伴具有依賴性，但同時擁有實質控制力，能主動管理風險。 <br><b>例子：</b>蘋果與鴻海的關係。</p>
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                                <h4 class="font-semibold text-teal-700">模式二：依賴但無法影響</h4>
+                                <p class="mt-2 text-sm text-slate-600">企業單方面依賴外部資源或條件，處於被動接受風險的地位。<br><b>例子：</b>企業向銀行借款，需接受其利率條件。</p>
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                                <h4 class="font-semibold text-teal-700">模式三：不依賴但產生影響</h4>
+                                <p class="mt-2 text-sm text-slate-600">企業的營運活動對外部產生影響（外部性），即使並非直接依賴該環境。<br><b>例子：</b>產品生命週期末端的廢棄物處理問題。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="application" class="content-section py-12 md:py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">實務應用：從理論到實踐</h2>
+                        <p class="mt-4 max-w-2xl mx-auto text-lg leading-8 text-slate-600">了解理論後，如何在實務中鑑別重大的永續議題？永續會計準則委員會(SASB)的行業指引提供了極佳的起點。它為77個行業提供了具體的揭露主題與指標。請選擇一個行業，查看其關鍵的永續揭露主題。</p>
+                    </div>
+
+                    <div class="mt-10 max-w-md mx-auto">
+                        <label for="sasb-industry" class="block mb-2 text-sm font-medium text-slate-900">選擇行業：</label>
+                        <select id="sasb-industry" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5">
+                            <option selected value="electronics">電子製造業</option>
+                            <option value="semiconductors">半導體業</option>
+                            <option value="airlines">航空業</option>
+                        </select>
+                    </div>
+
+                    <div id="sasb-content" class="mt-8 max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                        <!-- SASB content will be loaded here by JS -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-slate-800 text-white mt-20">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm">
+                <p>&copy; 2025 永續重大性解析。此為基於簡報大綱生成的互動式報告。</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('.content-section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const mobileNav = document.getElementById('mobile-nav');
+
+            const perspectiveData = {
+                issb: {
+                    title: 'ISSB：單一重大性 (由外到內)',
+                    user: '主要使用者：投資人、債權人等財務報表使用者。',
+                    position: '報告定位：屬於財務報告的組成部分，與財報連結。',
+                    principle: '重大性原則：聚焦於可能影響企業現金流量、籌資與資金成本的永續議題（財務重大性）。',
+                    note: '註：ISSB 刻意避用「財務重大性」一詞，以避免被窄化為傳統的股東至上主義，但其實質內涵相同。'
+                },
+                esrs: {
+                    title: 'ESRS：雙重重大性 (由外到內 & 由內到外)',
+                    user: '使用者：所有利害關係人，包括投資人、員工、社區、環團等。',
+                    position: '報告定位：一份獨立於財務報告之外的永續報告。',
+                    principle: '重大性原則：同時考量兩種方向：<br>1. <b>財務重大性：</b>外部環境對企業造成的財務影響（由外到內）。<br>2. <b>影響重大性：</b>企業營運對環境與社會造成的衝擊（由內而外）。',
+                    note: '註：此方法更全面地評估企業與社會環境的雙向互動關係。'
+                }
+            };
+
+            const sasbData = {
+                electronics: {
+                    name: '電子製造業',
+                    title: '電子製造業 關鍵揭露主題',
+                    topics: [
+                        '產品生命週期管理',
+                        '供應鏈中的勞工權益與安全',
+                        '產品安全與化學品管理',
+                        '能源與水資源管理',
+                        '資料安全與客戶隱私'
+                    ]
+                },
+                semiconductors: {
+                    name: '半導體業',
+                    title: '半導體業 關鍵揭露主題',
+                    topics: [
+                        '溫室氣體排放',
+                        '能源管理',
+                        '水資源與廢棄物管理',
+                        '供應鏈管理',
+                        '員工健康與安全'
+                    ]
+                },
+                airlines: {
+                    name: '航空業',
+                    title: '航空業 關鍵揭露主題',
+                    topics: [
+                        '溫室氣體排放',
+                        '勞動實踐',
+                        '市場波動下的競爭行為',
+                        '意外與安全管理'
+                    ]
+                }
+            };
+
+            async function generateTopicExplanation(industryKey, topic) {
+                const industryName = sasbData[industryKey].name;
+                const prompt = `請為 ${industryName} 的永續主題「${topic}」提供一個簡短的解釋或相關的實務案例。請用繁體中文回答。`;
+                
+                const llmResponseDiv = document.getElementById('llm-response');
+                const llmLoadingDiv = document.getElementById('llm-loading');
+                llmResponseDiv.innerHTML = '';
+                llmLoadingDiv.classList.remove('hidden');
+
+                try {
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        llmResponseDiv.innerHTML = `<p class="text-slate-700">${text}</p>`;
+                    } else {
+                        llmResponseDiv.innerHTML = '<p class="text-red-500">未能生成解釋。請稍後再試。</p>';
+                    }
+                } catch (error) {
+                    llmResponseDiv.innerHTML = `<p class="text-red-500">生成解釋時發生錯誤：${error.message}</p>`;
+                } finally {
+                    llmLoadingDiv.classList.add('hidden');
+                }
+            }
+
+            function updateSasbContent(industry) {
+                const data = sasbData[industry];
+                const container = document.getElementById('sasb-content');
+                let topicsHtml = data.topics.map(topic => `<li class="py-1">${topic}</li>`).join('');
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold text-slate-800 mb-4">${data.title}</h3>
+                    <ul class="list-disc list-inside text-slate-600 space-y-2">${topicsHtml}</ul>
+                    <button id="llm-generate-btn" class="mt-6 px-6 py-2 bg-teal-600 text-white rounded-full font-semibold hover:bg-teal-700 transition duration-300 ease-in-out shadow-md">✨ 深入了解主題 ✨</button>
+                    <div id="llm-loading" class="hidden mt-4 text-center text-teal-600">載入中...</div>
+                    <div id="llm-response" class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm"></div>
+                `;
+
+                document.getElementById('llm-generate-btn').addEventListener('click', () => {
+                    const selectedIndustryKey = document.getElementById('sasb-industry').value;
+                    const firstTopic = sasbData[selectedIndustryKey].topics[0];
+                    if (firstTopic) {
+                        generateTopicExplanation(selectedIndustryKey, firstTopic);
+                    }
+                });
+            }
+
+            function updatePerspectiveContent(type) {
+                const data = perspectiveData[type];
+                const container = document.getElementById('perspective-content');
+                container.innerHTML = `
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4">${data.title}</h3>
+                    <div class="space-y-3 text-slate-700">
+                        <p><span class="font-semibold">使用者導向：</span>${data.user}</p>
+                        <p><span class="font-semibold">報告定位：</span>${data.position}</p>
+                        <p><span class="font-semibold">重大性原則：</span>${data.principle}</p>
+                        <p class="text-sm text-slate-500 mt-4">${data.note}</p>
+                    </div>
+                `;
+                document.getElementById('btn-issb').classList.toggle('active', type === 'issb');
+                document.getElementById('btn-esrs').classList.toggle('active', type === 'esrs');
+            }
+
+            function navigateTo(hash) {
+                const targetId = hash.substring(1);
+                sections.forEach(section => {
+                    section.classList.toggle('active', section.id === targetId);
+                });
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.hash === hash);
+                });
+                if(mobileNav.value !== targetId) {
+                    mobileNav.value = targetId;
+                }
+            }
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const hash = e.currentTarget.hash;
+                    window.history.pushState(null, null, hash);
+                    navigateTo(hash);
+                });
+            });
+
+            mobileNav.addEventListener('change', (e) => {
+                 const hash = `#${e.target.value}`;
+                 window.history.pushState(null, null, hash);
+                 navigateTo(hash);
+            });
+            
+            window.addEventListener('popstate', () => {
+                const hash = window.location.hash || '#intro';
+                navigateTo(hash);
+            });
+
+            document.getElementById('btn-issb').addEventListener('click', () => updatePerspectiveContent('issb'));
+            document.getElementById('btn-esrs').addEventListener('click', () => updatePerspectiveContent('esrs'));
+            document.getElementById('sasb-industry').addEventListener('change', (e) => updateSasbContent(e.target.value));
+
+            const ctx = document.getElementById('standardsChart').getContext('2d');
+            const standardsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['使用者導向', '報告定位', '重大性原則'],
+                    datasets: [{
+                        label: 'ISSB (單一重大性)',
+                        data: [7, 8, 6],
+                        backgroundColor: 'rgba(51, 65, 85, 0.6)', // slate-700
+                        borderColor: 'rgba(51, 65, 85, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'ESRS (雙重重大性)',
+                        data: [9, 5, 10],
+                        backgroundColor: 'rgba(13, 148, 136, 0.6)', // teal-600
+                        borderColor: 'rgba(13, 148, 136, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'ISSB vs. ESRS 核心概念比較',
+                            font: { size: 16, family: "'Inter', 'Noto Sans TC', sans-serif" },
+                            padding: { top: 10, bottom: 20 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    // This is a proxy for qualitative difference, not a real score
+                                    if (context.parsed.y !== null) {
+                                       label += '概念強度/廣度示意';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                display: false
+                            },
+                            grid: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: '概念廣度/強度（示意）'
+                            }
+                        }
+                    }
+                }
+            });
+
+            const initialHash = window.location.hash || '#intro';
+            navigateTo(initialHash);
+            updatePerspectiveContent('issb');
+            updateSasbContent('electronics'); // Initialize SASB content on load
+        });
+    </script>
+</body>
+</html>
